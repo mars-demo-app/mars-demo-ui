@@ -206,14 +206,14 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
   const btn = document.getElementById("btn-burn-cpu");
   btn.disabled = true;
-  setStatus("Starting CPU load ~90s at ~95% duty…");
+  setStatus("Starting CPU intensive action…");
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
       body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.95, slice_ms: 20 }),
     });
     setStatus(
-      `CPU load accepted (~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
+      `CPU intensive action accepted\n` +
         `${JSON.stringify(result, null, 2)}`
     );
     setTimeout(() => {
@@ -221,7 +221,7 @@ document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
     }, (Number(result.duration_ms) || 90000) + 500);
   } catch (err) {
     btn.disabled = false;
-    setStatus(`CPU load failed: ${err.message}`, true);
+    setStatus(`CPU intensive action failed: ${err.message}`, true);
   }
 });
 
@@ -235,8 +235,8 @@ async function refreshBurnButtonState() {
     btnBurnMem.disabled = !!d.mem_burns_active;
     btnBurnCpu.disabled = !!d.cpu_burns_active;
     btnBurnMem.title = d.mem_burns_active
-      ? "Memory load already active — wait for it to finish"
-      : "Grow RSS toward ~95% of instance memory limit and hold";
+      ? "Memory intensive action already active — wait for it to finish"
+      : "Run memory intensive action";
   } catch {
     /* ignore */
   }
@@ -244,21 +244,21 @@ async function refreshBurnButtonState() {
 
 btnBurnMem.addEventListener("click", async () => {
   btnBurnMem.disabled = true;
-  setStatus("Growing RSS toward ~95% of instance memory limit, then holding 60s…");
+  setStatus("Starting memory intensive action…");
   try {
     const result = await api("/demo/burn-memory", {
       method: "POST",
       body: JSON.stringify({ target_pct: 0.95, hold_ms: 60000 }),
     });
     setStatus(
-      `Memory load accepted → ~${Math.round((result.target_pct || 0.95) * 100)}% of ${result.limit_mb}MB (${result.limit_source})\n` +
+      `Memory intensive action accepted\n` +
         `rss ${result.rss_mb_before} → ${result.rss_mb_after_alloc} MB (allocated ~${result.allocated_mb}MB), hold ${result.hold_ms}ms\n` +
         `${JSON.stringify(result, null, 2)}`
     );
     setTimeout(refreshBurnButtonState, (Number(result.hold_ms) || 60000) + 500);
   } catch (err) {
     setStatus(
-      `Memory load failed: ${err.message}${err.body ? "\n" + JSON.stringify(err.body, null, 2) : ""}`,
+      `Memory intensive action failed: ${err.message}${err.body ? "\n" + JSON.stringify(err.body, null, 2) : ""}`,
       true
     );
     refreshBurnButtonState();
