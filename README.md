@@ -27,7 +27,7 @@ API calls go to `/api/*`. Locally that path only works when you reverse-proxy to
 ## Contents
 
 - `public/index.html` — shop surface with demo actions
-- `public/app.js` — calls health, create order, slow email lookup, load test
+- `public/app.js` — calls health, create/cancel order, email lookup, load tests
 - `public/styles.css` — layout
 - `public/404.html` — static error document referenced by the app spec
 

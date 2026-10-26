@@ -120,7 +120,6 @@ document.getElementById("btn-cancel").addEventListener("click", async () => {
 
 document.getElementById("btn-lookup").addEventListener("click", async () => {
   try {
-    // Intentionally hits the unindexed email lookup path (latent bug scenario).
     const started = performance.now();
     const result = await api(`/orders/by-email?email=${encodeURIComponent(HOTPATH_EMAIL)}`);
     const ms = Math.round(performance.now() - started);
@@ -133,7 +132,7 @@ document.getElementById("btn-lookup").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-seed").addEventListener("click", async () => {
-  setStatus("Seeding ~80k bulk rows + hotpath rows (may take ~30–90s)…");
+  setStatus("Loading sample orders (~80k bulk + hotpath rows; may take a minute)…");
   try {
     const result = await api("/demo/seed-orders", {
       method: "POST",
@@ -144,14 +143,14 @@ document.getElementById("btn-seed").addEventListener("click", async () => {
         hotpath_email: HOTPATH_EMAIL,
       }),
     });
-    setStatus(`Seed complete\n${JSON.stringify(result, null, 2)}`);
+    setStatus(`Load complete\n${JSON.stringify(result, null, 2)}`);
   } catch (err) {
-    setStatus(`Seed failed: ${err.message}`, true);
+    setStatus(`Load failed: ${err.message}`, true);
   }
 });
 
 document.getElementById("btn-hammer").addEventListener("click", async () => {
-  setStatus(`Hammering unindexed by-email (${HOTPATH_EMAIL}) ×40 concurrent…`);
+  setStatus(`Running 40 concurrent email lookups for ${HOTPATH_EMAIL}…`);
   const wall = performance.now();
   const results = await Promise.allSettled(
     Array.from({ length: 40 }, async () => {
@@ -163,15 +162,14 @@ document.getElementById("btn-hammer").addEventListener("click", async () => {
   const summary = summarizeSettled(results);
   const wallMs = Math.round(performance.now() - wall);
   setStatus(
-    `Congestion hammer finished in ${wallMs}ms wall\n` +
+    `Email lookup burst finished in ${wallMs}ms wall\n` +
       `ok=${summary.ok} fail=${summary.fail} p50_server_ms=${summary.p50} p95_server_ms=${summary.p95}\n` +
-      `failStatuses=${JSON.stringify(summary.failStatuses)}\n` +
-      `(Missing index on customer_email — seed first if p95 is still tiny)`
+      `failStatuses=${JSON.stringify(summary.failStatuses)}`
   );
 });
 
 document.getElementById("btn-stress").addEventListener("click", async () => {
-  setStatus("API load test: 40 concurrent creates (scale demo when DELAY/MAX_INFLIGHT set)…");
+  setStatus("API load test: 40 concurrent creates…");
   const wall = performance.now();
   const results = await Promise.allSettled(
     Array.from({ length: 40 }, (_, i) =>
@@ -189,15 +187,14 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
   let healthNote = "";
   try {
     const health = await api("/health");
-    healthNote = `\ndemo knobs: ${JSON.stringify(health.demo || {})}`;
+    healthNote = `\nruntime: ${JSON.stringify(health.demo || {})}`;
   } catch {
     /* ignore */
   }
   setStatus(
     `API load test finished in ${wallMs}ms wall\n` +
       `ok=${summary.ok} fail=${summary.fail} failStatuses=${JSON.stringify(summary.failStatuses)}` +
-      healthNote +
-      `\nIf many 503 api saturated → scale api instance_count (playbook C)`
+      healthNote
   );
   try {
     await refreshOrders();
@@ -209,17 +206,14 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
   const btn = document.getElementById("btn-burn-cpu");
   btn.disabled = true;
-  setStatus(
-    "Starting sustained CPU burn ~90s at ~95% duty (short yields)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
-  );
+  setStatus("Starting CPU load ~90s at ~95% duty…");
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
       body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.95, slice_ms: 20 }),
     });
     setStatus(
-      `CPU burn accepted (duty-cycled ~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
-        `Try Check API / Create order during the burn — should not 504.\n` +
+      `CPU load accepted (~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
         `${JSON.stringify(result, null, 2)}`
     );
     setTimeout(() => {
@@ -227,7 +221,7 @@ document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
     }, (Number(result.duration_ms) || 90000) + 500);
   } catch (err) {
     btn.disabled = false;
-    setStatus(`CPU burn failed: ${err.message}`, true);
+    setStatus(`CPU load failed: ${err.message}`, true);
   }
 });
 
@@ -241,8 +235,8 @@ async function refreshBurnButtonState() {
     btnBurnMem.disabled = !!d.mem_burns_active;
     btnBurnCpu.disabled = !!d.cpu_burns_active;
     btnBurnMem.title = d.mem_burns_active
-      ? "Memory burn already active — wait (double-click OOMs 0.5GiB → exit 128 → 504s)"
-      : "Grow RSS to ~95% of instance memory limit and hold";
+      ? "Memory load already active — wait for it to finish"
+      : "Grow RSS toward ~95% of instance memory limit and hold";
   } catch {
     /* ignore */
   }
@@ -250,23 +244,21 @@ async function refreshBurnButtonState() {
 
 btnBurnMem.addEventListener("click", async () => {
   btnBurnMem.disabled = true;
-  setStatus(
-    "Growing RSS toward ~95% of instance memory limit, then holding 60s… do not double-click. Watch Insights + MARS_DEMO_BURN_MEM"
-  );
+  setStatus("Growing RSS toward ~95% of instance memory limit, then holding 60s…");
   try {
     const result = await api("/demo/burn-memory", {
       method: "POST",
       body: JSON.stringify({ target_pct: 0.95, hold_ms: 60000 }),
     });
     setStatus(
-      `Memory burn accepted → ~${Math.round((result.target_pct || 0.95) * 100)}% of ${result.limit_mb}MB (${result.limit_source})\n` +
+      `Memory load accepted → ~${Math.round((result.target_pct || 0.95) * 100)}% of ${result.limit_mb}MB (${result.limit_source})\n` +
         `rss ${result.rss_mb_before} → ${result.rss_mb_after_alloc} MB (allocated ~${result.allocated_mb}MB), hold ${result.hold_ms}ms\n` +
         `${JSON.stringify(result, null, 2)}`
     );
     setTimeout(refreshBurnButtonState, (Number(result.hold_ms) || 60000) + 500);
   } catch (err) {
     setStatus(
-      `Memory burn failed: ${err.message}${err.body ? "\n" + JSON.stringify(err.body, null, 2) : ""}`,
+      `Memory load failed: ${err.message}${err.body ? "\n" + JSON.stringify(err.body, null, 2) : ""}`,
       true
     );
     refreshBurnButtonState();
