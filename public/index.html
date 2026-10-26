@@ -10,21 +10,22 @@
     <main class="shell">
       <header class="hero">
         <p class="brand">Mars Demo Shop</p>
-        <h1>Orders that exercise App Platform + MARS</h1>
+        <h1>Orders on App Platform</h1>
         <p class="lede">
-          Static UI on App Platform talking to a Node API and managed Postgres.
-          Use the actions below to create healthy traffic or trigger demo failure paths.
+          Static UI talking to a Node API and managed Postgres.
+          Use the actions below to browse orders or generate traffic.
         </p>
         <div class="actions">
           <button type="button" id="btn-health">Check API</button>
           <button type="button" id="btn-create" class="primary">Create order</button>
           <button type="button" id="btn-cancel">Cancel latest order</button>
-          <button type="button" id="btn-lookup">Slow lookup</button>
-          <button type="button" id="btn-seed">Seed DB volume</button>
-          <button type="button" id="btn-hammer">Hammer lookups (×40)</button>
+          <button type="button" id="btn-lookup">Lookup by email</button>
+          <button type="button" id="btn-seed">Load sample orders</button>
+          <button type="button" id="btn-hammer">Email lookups (×40)</button>
           <button type="button" id="btn-stress">API load test (×40)</button>
-          <button type="button" id="btn-burn-cpu">Burn CPU ~95% / 90s</button>
-          <button type="button" id="btn-burn-mem">Burn memory to ~95%</button>
+          <button type="button" id="btn-burn-cpu">CPU intensive action</button>
+          <button type="button" id="btn-burn-mem">Memory intensive action</button>
+          <button type="button" id="btn-compute">Compute action</button>
         </div>
       </header>
 
