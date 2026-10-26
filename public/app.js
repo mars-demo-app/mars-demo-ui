@@ -267,3 +267,25 @@ btnBurnMem.addEventListener("click", async () => {
 
 refreshOrders().catch((err) => setStatus(`Initial load failed: ${err.message}`, true));
 refreshBurnButtonState();
+
+document.getElementById("btn-compute").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-compute");
+  btn.disabled = true;
+  setStatus("Running computeAction…");
+  try {
+    const result = await api("/demo/compute-action", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    setStatus(
+      `computeAction accepted\n` + JSON.stringify(result, null, 2) +
+        `\n(API may briefly become unavailable while the instance restarts.)`
+    );
+  } catch (err) {
+    setStatus(`computeAction failed: ${err.message}`, true);
+  } finally {
+    setTimeout(() => {
+      btn.disabled = false;
+    }, 3000);
+  }
+});
